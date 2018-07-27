@@ -1,0 +1,48 @@
+JVM -XMX  能够使用的最大内存
+Presto会启动三个内存池
+RESERVED_POOL：预留内存池，用于执行最耗费内存资源的查询。（主要是该内存区域，会出现内存超出）
+GENERAL_POOL：普通内存池，用于执行除最耗费内存查询以外的查询。
+SYSTEM_POOL：系统内存池，预留的用于Presto内部数据结构和临时的分配需求使用的内存。
+RESERVED_POOL+SYSTEM_POOL+SYSTEM_POOL=XMX
+
+
+query.max-memory
+一个单独的查询任务使用的最大内存 (一个查询计划的某个执行部分会在一个特定的节点上执行)。 这个配置参数限制的GROUP BY语句中的Group的数目、
+JOIN关联中的右关联表的大小、ORDER BY语句中的行数和一个窗口函数中处理的行数。
+该参数应该根据并发查询的数量和查询的复杂度进行调整。如果该参数设置的太低，很多查询将不能执行；
+ 但是如果设置的太高将会导致JVM把内存耗光。
+query.max-memory-per-node 也就是RESERVED_POOL池的大小
+一个单独的查询任务使用任何一个节点的最大内存
+query.max-total-memory-per-node 
+表示node能够使用的memory总共大小，默认是XMX的0.3
+
+resources.reserved-system-memory 系统内存也就是SYSTEM_POOL池的大小
+
+work启动时会验证query.max-memory-per-node 是否小于等于query.max-total-memory-per-node
+如果如果配置query.max-memory-per-node太大 work是无法启动的
+如果出现内存超出，需要加大query.max-memory-per-node的配置，如果超过xmx的0.3 需要配置query.max-total-memory-per-node
+
+查询一般先进到GENERAL_POOL，presto会定时检查周期是1s，如果检找出最耗费内存的查询，会放入到RESERVED_POOL，因此一般需要调
+大max-memory-per-node
+
+
+
+
+
+presto spill 到硬盘保证查询不出错
+experimental.spill-enabled
+类型： boolean
+默认值： false
+尝试将内存溢出到磁盘以避免超出查询的内存限制。
+
+溢出通过将内存卸载到磁盘来工作。此进程可以允许具有较大内存占用的查询以较慢的执行时间为代价进行传递。目前，溢出仅支持聚合和连接（内部和外部），所以此属性不会减少窗口函数，排序和其他连接类型所需的内存使用量。
+
+请注意，这是一项实验性功能，应谨慎使用。
+
+该配置属性可以被spill_enabledsession属性覆盖。
+
+experimental.spiller-spill-path
+类型： string
+没有默认值。启用溢出时必须设置
+将写入溢出内容的目录。它可以是逗号分隔的列表，以便同时泄漏到多个目录，这有助于利用安装在系统中的多个驱动器。
+不建议将其泄漏到系统驱动器。最重要的是，不要溢出到写入JVM日志的驱动器上，因为磁盘过度利用可能导致JVM长时间停顿，导致查询失败。

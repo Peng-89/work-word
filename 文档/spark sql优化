@@ -1,0 +1,16 @@
+/usr/local/spark-2.1.1/bin/spark-sql --master yarn  --executor-cores 5 --executor-memory 10g --num-executors 20 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a
+
+1.修改序列化
+--conf spark.serializer=org.apache.spark.serializer.KryoSerializer
+2.修改sql.shuffle.partitions 提高
+--conf spark.sql.shuffle.partitions=300
+3.增加并行度 官方建议为设置成运行任务的core的2-3倍。
+--conf spark.default.parallelism=200
+4.Spark SQL 将会基于统计信息自动地为每一列选择一种压缩编码方式
+--conf spark.sql.inMemoryColumnarStorage.compressed=true
+5.
+--conf spark.network.timeout=240s
+大小写
+spark.sql.caseSensitive=true
+
+/usr/local/spark-2.1.1/bin/spark-sql --master yarn  --executor-cores 5 --executor-memory 2g --num-executors 2 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.shuffle.partitions=500 --conf spark.default.parallelism=200 --conf spark.sql.inMemoryColumnarStorage.compressed=true -f /home/hbase/order.sql
