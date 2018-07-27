@@ -1,0 +1,163 @@
+172.17.210.137-dn210137     mysql
+172.17.210.19 -nn210019     namenode secondarynamenode resourcemanager kerberos
+172.17.210.212-dn210212     datanode nodemanager 
+172.17.210.230-dn210230     datanode nodemanager 
+172.17.210.231-dn210231     datanode nodemanager hiveserver2
+172.17.210.232-dn210232     datanode nodemanager hivemetastore hue
+
+
+#?????
+kadmin.local -q "addprinc -randkey -maxrenewlife 7days bdp_presto/nn210019@WONHIGH.CN"
+kadmin.local -q "xst -norandkey -k /data/conf/hadoop/kerberos/keys/bdp_presto.keytab  bdp_presto/nn210019@WONHIGH.CN"
+# ??ļ??????ͻ???/data/conf/hadoop/kerberos/keys/bdp_presto.keytab
+
+#?ͻ???
+chown bdp_presto:hadoop /data/conf/hadoop/kerberos/keys/bdp_presto.keytab
+su - bdp_presto
+kinit -k -t /data/conf/hadoop/kerberos/keys/bdp_presto.keytab  bdp_presto/nn210019@WONHIGH.CN
+klist
+
+kadmin.local -q "addprinc -randkey -maxrenewlife 7days kettle/dev-dc-kettleClient-01@WONHIGH.CN"
+
+kadmin.local -q "xst -norandkey -k /data/conf/hadoop/kerberos/keys/kettle.keytab  kettle/dev-dc-kettleClient-01@WONHIGH.CN"
+
+
+kinit -k -t /data/conf/hadoop/kerberos/keys/kettle.keytab  kettle/dev-dc-kettleClient-01@WONHIGH.CN
+
+
+kadmin.local -q "addprinc -randkey -maxrenewlife 7days user/wonhigh-gx@WONHIGH.CN"
+
+kadmin.local -q "xst -norandkey -k /data/conf/hadoop/kerberos/keys/user87.keytab  user/wonhigh-gx@WONHIGH.CN"
+
+kinit -k -t /data/conf/hadoop/kerberos/keys/hbase.keytab  hbase/test-bdp-etl@WONHIGH.CN
+
+
+ln -sf /usr/local/ranger-usersync/scripts/start.sh ranger-usersync-start
+ln -sf /usr/local/ranger-admin/ews/stop.sh ranger-usersync-stop
+
+
+mvn clean compile package assembly:assembly install  -DskipTests=true
+
+!connect jdbc:hive2://dn210231:10000/default;principal=hive/dn210231@WONHIGH.CN hive
+
+beeline -u 'jdbc:hive2://dn210231:10000/default;principal=hive/dn210231@WONHIGH.CN'
+
+
+beeline -u 'jdbc:hive2://dn210137:10000/default;principal=hive2/dn210137@WONHIGH.CN'
+
+
+beeline -u 'jdbc:hive2://test-app-003:10000/default;principal=hive/test-app-003@WONHIGH.CN'
+
+beeline -u 'jdbc:hive2://test-app-003:10000/default;principal=hive/test-app-003@WONHIGH.CN'
+
+beeline -u 'jdbc:hive2://10.234.6.143:10000/dc_ods;principal=hive/dev-dc-mq-01@WONHIGH.CN'
+
+set hive.execution.engine=tez;
+
+beeline -u 'jdbc:hive2://172.17.210.128:10001/dc_ods'
+
+
+beeline -u 'jdbc:hive2://10.234.6.144:10000/dc_ods;principal=hive/test-hive-001@WONHIGH.CN'
+
+
+/usr/local/ranger/ranger-release-ranger-1.0.0/agents-common/src/main/java/org/apache/ranger/admin/client/RangerAdminRESTClient.java
+
+
+????ˣ?
+kadmin.local -q "addprinc -randkey -maxrenewlife 100days hive2/dn210232@WONHIGH.CN"
+kadmin.local -q "xst -norandkey -k /data/conf/hadoop/kerberos/keys/hive2.keytab  hive2/dn210232@WONHIGH.CN"
+?ͻ??ˣ?
+
+kinit -k -t /data/conf/hadoop/kerberos/keys/hive2.keytab  hive2/dn210137@WONHIGH.CN
+klist
+
+kinit -k -t /data/conf/hadoop/kerberos/keys/hive2.keytab  hive2/dn210232@WONHIGH.CN
+
+useradd hive2 -g hadoop
+
+nohup >/usr/local/hive-2.1.1/logs/hiveserver.log /usr/local/hive-2.1.1/bin/hive --service hiveserver2 --hiveconf hive.root.logger=DEBUG,console  &
+
+hiveserver2 &
+
+nohup >/usr/local/hive-2.1.1/logs/metastore.log  /usr/local/hive-2.1.1/bin/hive --service metastore &
+
+?????????
+root/wonhighdba
+
+wonhigh@016
+wonhigh@014
+210.128:dc#wonhigh@014
+209.3:wonhigh_belle@dc016
+
+create table tb_partition2(id string, name string)
+PARTITIONED BY (month string)
+stored as parquet;
+
+source /usr/local/hive/hive-2.1.1/scripts/metastore/upgrade/mysql/021-HIVE-7018.mysql.sql;
+
+
+mvn clean package -Dhadoop.version=2.6.2 -DskipTests=true -Dmaven.javadoc.skip=true
+
+bin/slider package --install --name presto --package presto-yarn-package-1.6-SNAPSHOT-0.200.zip --replacepkg
+hadoop dfs -rmr hdfs://nn210019:9000/user/bdp_presto/.slider/cluster/presto-query
+bin/slider create presto-query --template appConfig.json --resources resources.json 
+
+/usr/local/spark-2.1.1/bin/spark-shell --master yarn --executor-cores 2 --executor-memory 4g --num-executors 2 --driver-cores 1 --driver-memory 1g --conf spark.yarn.queue=a 
+
+presto-cli-0.195-executable.jar --server dn210212:4380 --catalog hive --schema default??
+
+sbin/start-thriftserver.sh --master yarn --executor-cores 8 --executor-memory 10g --num-executors 10 --driver-cores 2 --driver-memory 4g --conf spark.yarn.queue=a --hiveconf hive.server2.thrift.port=10001 --hiveconf hive.server2.logging.operation.enabled=true --hiveconf hive.server2.authentication.kerberos.principal=hive/dev-app-003@WONHIGH.CN --hiveconf hive.server2.authentication.kerberos.keytab /data/conf/hadoop/kerberos/keys/hive.keytab
+
+
+/usr/local/spark-2.1.1/bin/spark-shell --master yarn --executor-cores 4 --executor-memory 6g --num-executors 2 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a --jars /usr/local/spark-2.1.1/extjars/elasticsearch-spark-20_2.11-5.0.2.jar --conf spark.es.nodes=10.234.9.50,10.234.9.51,10.234.9.52 --conf spark.es.port=9200 --conf spark.es.net.ssl=true  --conf spark.es.net.ssl.keystore.location=file:///data/conf/hadoop/kerberos/keys/sgadmin-keystore.jks --conf spark.es.net.ssl.keystore.pass=sgadmin  --conf spark.es.net.ssl.keystore.type=JKS  --conf spark.es.net.ssl.truststore.location=file:///data/conf/hadoop/kerberos/keys/truststore.jks --conf spark.es.net.ssl.truststore.pass=changeit  --conf spark.es.net.ssl.cert.allow.self.signed=false  --conf spark.es.net.ssl.protocol=TLSv1.2 --conf spark.es.index.auto.create=true  --conf spark.es.net.http.auth.user=CN=sgadmin --conf spark.es.net.http.auth.pass=sgadmin --conf spark.es.nodes.wan.only=true 
+
+
+/usr/local/spark-2.1.1/bin/spark-shell --master yarn --executor-cores 4 --executor-memory 6g --num-executors 5 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a  --conf spark.es.nodes=10.240.11.178,10.240.11.179,10.240.11.180 --conf spark.es.port=9200 --conf spark.es.net.ssl=true  --conf spark.es.net.ssl.keystore.location=file:///data/conf/hadoop/kerberos/keys/sgadmin-keystore.jks --conf spark.es.net.ssl.keystore.pass=sgadmin  --conf spark.es.net.ssl.keystore.type=JKS  --conf spark.es.net.ssl.truststore.location=file:///data/conf/hadoop/kerberos/keys/truststore.jks --conf spark.es.net.ssl.truststore.pass=changeit  --conf spark.es.net.ssl.cert.allow.self.signed=false  --conf spark.es.net.ssl.protocol=TLSv1.2 --conf spark.es.index.auto.create=true  --conf spark.es.net.http.auth.user=CN=sgadmin --conf spark.es.net.http.auth.pass=sgadmin --conf spark.es.nodes.wan.only=true  --jars  /usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/config-1.2.1.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/kafka_2.11-0.10.2.1.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/spark-sql-kafka-0-10_2.11-2.1.1.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/hirondelle-date4j-1.5.1.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/fastjson-1.2.46.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/elasticsearch-spark-20_2.11-5.0.2.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/spark-sql-kafka-0-10_2.11-2.1.1.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/jedis-2.4.2.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/commons-pool2-2.0.jar,/usr/local/wonhigh/platform/bdp/udc_faceid/platform-bdp-udc/lib/platform-bdp-udc.jar
+
+
+
+/usr/local/spark-2.1.1/bin/spark-submit  --class cn.wonhigh.spark.udc.UdcSparkHiveToEs --master yarn  --executor-cores 4 --executor-memory 8g --num-executors 2 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a --jars /usr/local/spark-2.1.1/extjars/elasticsearch-spark-20_2.11-5.0.2.jar --conf spark.debug.maxToStringFields=100 --conf spark.es.nodes=10.234.9.50,10.234.9.51,10.234.9.52 --conf spark.es.port=9200 --conf spark.es.net.ssl=true  --conf spark.es.net.ssl.keystore.location=file:///data/conf/hadoop/kerberos/keys/sgadmin-keystore.jks --conf spark.es.net.ssl.keystore.pass=sgadmin  --conf spark.es.net.ssl.keystore.type=JKS  --conf spark.es.net.ssl.truststore.location=file:///data/conf/hadoop/kerberos/keys/truststore.jks --conf spark.es.net.ssl.truststore.pass=changeit  --conf spark.es.net.ssl.cert.allow.self.signed=false  --conf spark.es.net.ssl.protocol=TLSv1.2 --conf spark.es.index.auto.create=true  --conf spark.es.net.http.auth.user=CN=sgadmin --conf spark.es.net.http.auth.pass=sgadmin --conf spark.es.nodes.wan.only=true  /usr/local/spark-2.1.1/extjars/sparkstreamingproject.jar
+
+/usr/local/spark-2.1.1/bin/spark-sql --master yarn  --executor-cores 5 --executor-memory 6g --num-executors 10 --driver-cores 2 --driver-memory 2g --conf spark.yarn.queue=a
+
+
+conf.set("es.net.ssl","true")  
+conf.set("es.net.ssl.keystore.location","D:\\test_jar\\node-0-keystore.jks")//"D:\\test_jar\\node-0-keystore.jks"  
+conf.set("es.net.ssl.keystore.pass","changeit")  
+conf.set("es.net.ssl.keystore.type","JKS")  
+conf.set("es.net.ssl.truststore.location","D:\\test_jar\\truststore.jks")//?linux??????????·??дfile:///ȫ·??  
+conf.set("es.net.ssl.truststore.pass","changeit")  
+conf.set("es.net.ssl.cert.allow.self.signed","false")  
+conf.set("es.net.ssl.protocol","TLSv1.2")//?????TLS,????汾?ţ???򱨴? 
+conf.set("es.index.auto.create","true")  
+conf.set("es.net.http.auth.user","admin")//???s??û??  
+conf.set("es.net.http.auth.pass","admin")//???s???? 
+//conf.set("es.nodes.wan.only","true")  
+conf.set("es.index.read.missing.as.empty","true")  
+
+su - bdp_presto
+cd /usr/local/presto-server-0.201
+bin/launcher restart
+exit
+exit
+
+select c_custkey,column_transform(c_name) from customer group by c_custkey limit 10
+
+
+
+/usr/local/wonhigh/bdp/presto-cli/bin/presto-cli  --server https://172.17.209.3:38080   --keystore-path /usr/local/presto-server-0.201-xp/keystore.jks  --keystore-password 123456 --catalog hive  --user admin --password   
+/usr/local/wonhigh/bdp/presto-cli/bin/presto-cli  --server https://172.17.209.3:4380   --keystore-path /usr/local/presto-server-0.201/keystore.jks  --keystore-password 123456 --catalog retail_pos  --user admin --password
+
+/usr/local/wonhigh/bdp/presto-cli/bin/presto-cli  --server https://172.17.209.3:43808   --keystore-path /usr/local/presto-server-0.201-xp1/keystore.jks  --keystore-password 123456 --catalog retail_pos  --user admin --password
+
+
+/usr/local/wonhigh/bdp/presto-cli/bin/presto-cli  --server http://172.17.222.147:4380 --catalog mysql
+
+create view cyf_orc_1.test_view as select * from cyf_orc_1.customer inner join cyf_orc_1.orders on c_custkey=o_custkey limit 10;
+
+
+{"id":"1","name":"Yin","address":[{"city":"Columbus","state":"Ohio"}]}
+
+
+ Row.fromSeq(Seq("a","b",Row.fromSeq(data).toSeq))
+ Row.fromSeq((row.toSeq.toList:::List(Row.fromSeq(data).toSeq)))

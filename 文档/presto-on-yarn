@@ -1,0 +1,119 @@
+bin/slider package --install --name presto --package /usr/local/presto-yarn/presto-yarn-package-1.6-SNAPSHOT-0.201.zip --replacepkg
+
+
+bin/slider create presto-query --template /usr/local/presto-yarn/appConfig.json --resources /usr/local/presto-yarn/resources.json
+
+ /usr/local/wonhigh/bdp/presto-cli/bin/presto-cli --server http://dn209004:8080 --catalog hive
+
+
+如何配置使用Label based scheduling？
+
+首先，要选择apache hadoop 2.6或hdp2.2（可使用ambari部署）发行版。
+
+之后按照以下步骤操作：
+
+步骤1：添加系统级别的label（相当于所有label的全集），注意，各个节点上的label必须都在系统级别的label中。
+
+yarn rmadmin -addToClusterNodeLabels normal,highmem
+
+yarn rmadmin -addToClusterNodeLabels coordinator,worker
+
+步骤2：为各个节点分别添加label（可动态修改）
+
+yarn rmadmin -replaceLabelsOnNode “nodeId,label1,label2,…,labeln”
+
+yarn rmadmin -replaceLabelsOnNode "dn209002,coordinator"
+yarn rmadmin -replaceLabelsOnNode "dn209003,worker"
+
+注意，nodeId是nodemanager的唯一标示，注意，一个节点上可以有多个nodemanager，每个nodemanager的nodeid可以在ResourceManager界面上看到，通常有host和PRC port拼接而成，默认情况下，各个nodemanager的RPC port是随机选取的，你可以将所有的nodemanager配置成一样的，便于管理：
+
+<property>
+
+<name>yarn.nodemanager.address</name>
+
+<value>0.0.0.0:45454</value>
+
+</property>
+
+步骤3：配置label重启恢复功能。这样，label信息会保存到hdfs上（默认是保存在内存中的），之后yarn重新启动，可以自动恢复所有label信息：
+
+<property>
+<name>yarn.node-labels.manager-class</name>
+<value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager</value>
+</property>
+
+步骤4：修改capacity scheduler相关配置，设置每个队列对应的label，以及每中label的资源上下限。具体配置，可参考相关资源。
+
+
+yarn rmadmin -refreshQueues
+
+修改capacity-scheduler.xml 绑定队列和label
+<property>
+<name>yarn.scheduler.capacity.root.accessible-node-labels</name>
+<value>*</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.a.accessible-node-labels</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.b.accessible-node-labels</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.q_common.accessible-node-labels</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.accessible-node-labels.a.capacity</name>
+<value>33</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.accessible-node-labels.b.capacity</name>
+<value>33</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.accessible-node-labels.q_common.capacity</name>
+<value>34</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.a.accessible-node-labels.a.capacity</name>
+<value>100</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.b.accessible-node-labels.b.capacity</name>
+<value>100</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.q_common.accessible-node-labels.q_common.capacity</name>
+<value>100</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.default-node-label-expression</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.a.default-node-label-expression</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.b.default-node-label-expression</name>
+<value>worker,coordinator</value>
+</property>
+
+<property>
+<name>yarn.scheduler.capacity.root.q_common.default-node-label-expression</name>
+<value>worker,coordinator</value>
+</property>
